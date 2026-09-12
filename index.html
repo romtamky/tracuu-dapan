@@ -48,63 +48,109 @@
   <!-- Danh sách hiển thị đáp án -->
   <main id="resultList" class="w-full max-w-xl space-y-3 pb-12"></main>
 
-  <script>
-    let database = [];
-    const searchBox = document.getElementById('searchBox');
-    const resultList = document.getElementById('resultList');
-    const statusEl = document.getElementById('status');
-    const bmInput = document.getElementById('bmCode');
+ <script>
+  let database = [];
+  const searchBox = document.getElementById('searchBox');
+  const resultList = document.getElementById('resultList');
+  const statusEl = document.getElementById('status');
+  const bmInput = document.getElementById('bmCode');
 
-    // Tự sinh mã Bookmarklet theo URL hiện tại của Vercel
-    const currentOrigin = window.location.origin;
-    bmInput.value = `javascript:(function(){var s=document.createElement('script');s.src='${currentOrigin}/inject.js?t='+Date.now();document.body.appendChild(s);})();`;
+  // 1. TỰ ĐỘNG SINH MÃ BOOKMARKLET MỚI (Lấy mọi câu hỏi gửi sang Vercel)
+  const currentOrigin = window.location.origin;
+  bmInput.value = `javascript:(function(){var qs=document.querySelectorAll('.exam-question-content');if(qs.length===0){alert('Không thấy câu hỏi!');return;}var arr=[];qs.forEach(function(q){arr.push(q.innerText.trim());});window.open('${currentOrigin}/#auto='+encodeURIComponent(JSON.stringify(arr)),'_blank');})();`;
 
-    function copyBookmarklet() {
-      navigator.clipboard.writeText(bmInput.value);
-      alert("Đã sao chép mã Bookmarklet! Dán mã này vào phần URL của Dấu trang trên điện thoại.");
-    }
+  function copyBookmarklet() {
+    navigator.clipboard.writeText(bmInput.value);
+    alert("Đã sao chép mã Tự Động! Hãy lưu vào dấu trang trên điện thoại.");
+  }
 
-    // Tải dữ liệu data.json
-    fetch('data.json')
-      .then(r => r.json())
-      .then(data => {
-        database = data;
-        statusEl.textContent = `Sẵn sàng: ${database.length} câu hỏi`;
-      })
-      .catch(() => {
-        statusEl.textContent = 'Lỗi nạp file dữ liệu!';
+  function clean(str) {
+    return str.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[đĐ]/g, 'd').replace(/\s+/g, ' ').trim();
+  }
+
+  // 2. TẢI DỮ LIỆU TỪ DATA.JSON
+  fetch('data.json')
+    .then(r => r.json())
+    .then(data => {
+      database = data;
+      
+      // 3. XỬ LÝ TỰ ĐỘNG: NẾU VERCEL NHẬN ĐƯỢC DANH SÁCH CÂU HỎI TỪ TRANG THI
+      if (window.location.hash.startsWith('#auto=')) {
+        try {
+          const payload = window.location.hash.replace('#auto=', '');
+          const questions = JSON.parse(decodeURIComponent(payload));
+          
+          document.getElementById('searchBox').parentElement.style.display = 'none'; // Ẩn thanh tìm kiếm
+          statusEl.textContent = `Đã tự động giải ${questions.length} câu hỏi từ bài thi!`;
+          
+          let htmlOut = '';
+          // Lần lượt đọc từng câu hỏi và in ra kết quả
+          questions.forEach((qText, index) => {
+            const qClean = clean(qText);
+            const match = database.find(item => clean(item.q).includes(qClean) || qClean.includes(clean(item.q)));
+            
+            if (match) {
+              htmlOut += `
+                <div class="p-4 bg-slate-900 border border-slate-800 rounded-xl shadow mb-3">
+                  <div class="text-xs text-slate-500 mb-1">Câu ${index + 1}:</div>
+                  <p class="text-sm font-medium text-slate-200">${qText}</p>
+                  <div class="mt-2 pt-2 border-t border-slate-800">
+                    <span class="text-xs font-semibold px-2 py-0.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-700">ĐÁP ÁN ĐÚNG</span>
+                    <p class="text-base font-bold text-emerald-400 mt-1.5">${match.a}</p>
+                  </div>
+                </div>`;
+            } else {
+              htmlOut += `
+                <div class="p-4 bg-slate-900 border border-slate-800 rounded-xl shadow mb-3 opacity-50">
+                  <div class="text-xs text-slate-500 mb-1">Câu ${index + 1}:</div>
+                  <p class="text-sm font-medium text-slate-200">${qText}</p>
+                  <div class="mt-2 pt-2 border-t border-slate-800">
+                    <p class="text-sm font-bold text-red-400 mt-1.5">❌ Không có trong ngân hàng</p>
+                  </div>
+                </div>`;
+            }
+          });
+          resultList.innerHTML = htmlOut;
+          return; // Kết thúc tự động, không chạy phần tìm kiếm thủ công bên dưới nữa
+        } catch(e) {
+          alert("Lỗi đọc dữ liệu tự động!");
+        }
+      }
+
+      // 4. NẾU KHÔNG CÓ TỰ ĐỘNG THÌ TRỞ VỀ CHẾ ĐỘ GÕ TÌM KIẾM THỦ CÔNG
+      statusEl.textContent = `Sẵn sàng: ${database.length} câu hỏi`;
+      
+      searchBox.addEventListener('input', (e) => {
+        const q = clean(e.target.value);
+        if (q.length < 2) {
+          resultList.innerHTML = '';
+          statusEl.textContent = `Sẵn sàng: ${database.length} câu hỏi`;
+          return;
+        }
+
+        const matched = database.filter(item => clean(item.q).includes(q));
+        statusEl.textContent = `Tìm thấy: ${matched.length} câu hỏi`;
+
+        if (matched.length === 0) {
+          resultList.innerHTML = `<div class="p-4 bg-slate-900 border border-slate-800 rounded-xl text-center text-slate-400 text-sm">Không có kết quả.</div>`;
+          return;
+        }
+
+        resultList.innerHTML = matched.map(item => `
+          <div class="p-4 bg-slate-900 border border-slate-800 rounded-xl shadow mb-3">
+            <p class="text-sm font-medium text-slate-200">${item.q}</p>
+            <div class="mt-2 pt-2 border-t border-slate-800">
+              <span class="text-xs font-semibold px-2 py-0.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-700">ĐÁP ÁN ĐÚNG</span>
+              <p class="text-base font-bold text-emerald-400 mt-1.5">${item.a}</p>
+            </div>
+          </div>
+        `).join('');
       });
 
-    function clean(str) {
-      return str.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[đĐ]/g, 'd').replace(/\s+/g, ' ').trim();
-    }
-
-    searchBox.addEventListener('input', (e) => {
-      const q = clean(e.target.value);
-      if (q.length < 2) {
-        resultList.innerHTML = '';
-        statusEl.textContent = `Sẵn sàng: ${database.length} câu hỏi`;
-        return;
-      }
-
-      const matched = database.filter(item => clean(item.q).includes(q));
-      statusEl.textContent = `Tìm thấy: ${matched.length} câu hỏi`;
-
-      if (matched.length === 0) {
-        resultList.innerHTML = `<div class="p-4 bg-slate-900 border border-slate-800 rounded-xl text-center text-slate-400 text-sm">Không có kết quả trùng khớp. Hãy gõ từ khóa ngắn hơn.</div>`;
-        return;
-      }
-
-      resultList.innerHTML = matched.map(item => `
-        <div class="p-4 bg-slate-900 border border-slate-800 rounded-xl shadow">
-          <p class="text-sm font-medium text-slate-200">${item.q}</p>
-          <div class="mt-2 pt-2 border-t border-slate-800">
-            <span class="text-xs font-semibold px-2 py-0.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-700">ĐÁP ÁN ĐÚNG</span>
-            <p class="text-base font-bold text-emerald-400 mt-1.5">${item.a}</p>
-          </div>
-        </div>
-      `).join('');
+    })
+    .catch(() => {
+      statusEl.textContent = 'Lỗi nạp file dữ liệu!';
     });
-  </script>
+</script>
 </body>
 </html>
