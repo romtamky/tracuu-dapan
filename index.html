@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Cổng Tra Cứu Đề Thi</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen p-4 flex flex-col items-center">
+
+  <header class="w-full max-w-xl mb-4 text-center">
+    <h1 class="text-xl font-bold text-sky-400">Tra Cứu Đáp Án Đề Thi</h1>
+    <p class="text-xs text-slate-400 mt-1">Dành cho cả máy tính thi phòng máy và điện thoại cá nhân</p>
+  </header>
+
+  <!-- Mục 1: Bộ công cụ dành cho điện thoại thi trực tiếp -->
+  <div class="w-full max-w-xl bg-slate-900 border border-slate-800 rounded-xl p-3.5 mb-4 text-sm">
+    <div class="font-semibold text-emerald-400 mb-1 flex items-center gap-1.5">
+      <span>📱 Thi trên điện thoại (Bắt chữ tự động):</span>
+    </div>
+    <p class="text-xs text-slate-300 leading-relaxed">
+      Tạo một dấu trang mới trên Safari/Chrome của điện thoại với đường dẫn sau:
+    </p>
+    <div class="mt-2 flex gap-2">
+      <input id="bmCode" readonly class="w-full bg-slate-950 border border-slate-700 rounded px-2.5 py-1 text-xs text-slate-400 font-mono select-all">
+      <button onclick="copyBookmarklet()" class="bg-sky-600 hover:bg-sky-500 text-white text-xs px-3 py-1 rounded font-medium shrink-0">Sao chép</button>
+    </div>
+  </div>
+
+  <!-- Mục 2: Tra chữ nhanh (Dành cho máy tính không cài đặt được) -->
+  <div class="sticky top-2 w-full max-w-xl z-50 bg-slate-950/90 backdrop-blur pb-2">
+    <div class="relative">
+      <input 
+        id="searchBox" 
+        type="text" 
+        placeholder="Gõ vài từ khóa trong câu hỏi..." 
+        class="w-full bg-slate-900 border border-sky-500 rounded-xl px-4 py-3 pl-11 text-base text-white focus:outline-none focus:ring-2 focus:ring-sky-400 shadow-xl"
+        autocomplete="off"
+        autofocus
+      />
+      <svg class="absolute left-3.5 top-3.5 w-5 h-5 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+      </svg>
+    </div>
+    <div id="status" class="text-xs text-slate-400 mt-1.5 text-right">Đang tải ngân hàng đề...</div>
+  </div>
+
+  <!-- Danh sách hiển thị đáp án -->
+  <main id="resultList" class="w-full max-w-xl space-y-3 pb-12"></main>
+
+  <script>
+    let database = [];
+    const searchBox = document.getElementById('searchBox');
+    const resultList = document.getElementById('resultList');
+    const statusEl = document.getElementById('status');
+    const bmInput = document.getElementById('bmCode');
+
+    // Tự sinh mã Bookmarklet theo URL hiện tại của Vercel
+    const currentOrigin = window.location.origin;
+    bmInput.value = `javascript:(function(){var s=document.createElement('script');s.src='${currentOrigin}/inject.js?t='+Date.now();document.body.appendChild(s);})();`;
+
+    function copyBookmarklet() {
+      navigator.clipboard.writeText(bmInput.value);
+      alert("Đã sao chép mã Bookmarklet! Dán mã này vào phần URL của Dấu trang trên điện thoại.");
+    }
+
+    // Tải dữ liệu data.json
+    fetch('data.json')
+      .then(r => r.json())
+      .then(data => {
+        database = data;
+        statusEl.textContent = `Sẵn sàng: ${database.length} câu hỏi`;
+      })
+      .catch(() => {
+        statusEl.textContent = 'Lỗi nạp file dữ liệu!';
+      });
+
+    function clean(str) {
+      return str.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[đĐ]/g, 'd').replace(/\s+/g, ' ').trim();
+    }
+
+    searchBox.addEventListener('input', (e) => {
+      const q = clean(e.target.value);
+      if (q.length < 2) {
+        resultList.innerHTML = '';
+        statusEl.textContent = `Sẵn sàng: ${database.length} câu hỏi`;
+        return;
+      }
+
+      const matched = database.filter(item => clean(item.q).includes(q));
+      statusEl.textContent = `Tìm thấy: ${matched.length} câu hỏi`;
+
+      if (matched.length === 0) {
+        resultList.innerHTML = `<div class="p-4 bg-slate-900 border border-slate-800 rounded-xl text-center text-slate-400 text-sm">Không có kết quả trùng khớp. Hãy gõ từ khóa ngắn hơn.</div>`;
+        return;
+      }
+
+      resultList.innerHTML = matched.map(item => `
+        <div class="p-4 bg-slate-900 border border-slate-800 rounded-xl shadow">
+          <p class="text-sm font-medium text-slate-200">${item.q}</p>
+          <div class="mt-2 pt-2 border-t border-slate-800">
+            <span class="text-xs font-semibold px-2 py-0.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-700">ĐÁP ÁN ĐÚNG</span>
+            <p class="text-base font-bold text-emerald-400 mt-1.5">${item.a}</p>
+          </div>
+        </div>
+      `).join('');
+    });
+  </script>
+</body>
+</html>
