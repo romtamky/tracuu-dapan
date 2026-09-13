@@ -48,19 +48,17 @@
   <!-- Danh sách hiển thị đáp án -->
   <main id="resultList" class="w-full max-w-xl space-y-3 pb-12"></main>
 
- <script>
+<script>
   let database = [];
   const searchBox = document.getElementById('searchBox');
   const resultList = document.getElementById('resultList');
   const statusEl = document.getElementById('status');
   const bmInput = document.getElementById('bmCode');
 
-  // 1. TỰ ĐỘNG SINH MÃ BOOKMARKLET MỚI (Lấy mọi câu hỏi gửi sang Vercel)
-  //const currentOrigin = window.location.origin;
-//  bmInput.value = `javascript:(function(){var qs=document.querySelectorAll('.exam-question-content');if(qs.length===0){alert('Không thấy câu hỏi!');return;}var arr=[];qs.forEach(function(q){arr.push(q.innerText.trim());});window.open('${currentOrigin}/#auto='+encodeURIComponent(JSON.stringify(arr)),'_blank');})();`;
-// 1. TỰ ĐỘNG SINH MÃ BOOKMARKLET MỚI (Lấy mọi câu hỏi gửi sang Vercel)
+  // 1. TỰ ĐỘNG SINH MÃ BOOKMARKLET MỚI (Lệnh tìm kiếm linh hoạt cho cả PC & Điện thoại)
   const currentOrigin = window.location.origin;
-  bmInput.value = `javascript:(function(){var qs=document.querySelectorAll('.font-semibold.text-foreground-900.leading-relaxed.mb-4');if(qs.length===0){alert('Không thấy câu hỏi!');return;}var arr=[];qs.forEach(function(q){arr.push(q.innerText.trim());});window.open('${currentOrigin}/#auto='+encodeURIComponent(JSON.stringify(arr)),'_blank');})();`;
+  bmInput.value = `javascript:(function(){var qs=document.querySelectorAll('div[class*="font-semibold"][class*="leading-relaxed"]');if(qs.length===0){alert('Không thấy câu hỏi! Cấu trúc trang web đã thay đổi.');return;}var arr=[];qs.forEach(function(q){if(q.innerText.trim().length>10){arr.push(q.innerText.trim());}});var url='${currentOrigin}/#auto='+encodeURIComponent(JSON.stringify(arr));var newTab=window.open(url,'_blank');if(!newTab){alert('❌ LỖI: Safari đã chặn mở tab mới!\\n\\nVui lòng vào Cài đặt iPhone -> Safari -> Tắt "Chặn Cửa sổ bật lên" (Block Pop-ups) rồi chạy lại nhé.');}})();`;
+
   function copyBookmarklet() {
     navigator.clipboard.writeText(bmInput.value);
     alert("Đã sao chép mã Tự Động! Hãy lưu vào dấu trang trên điện thoại.");
