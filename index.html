@@ -27,7 +27,7 @@
     </div>
   </div>
 
-  <!-- Mục 2: Tra chữ nhanh (Dành cho máy tính không cài đặt được) -->
+  <!-- Mục 2: Tra chữ nhanh -->
   <div class="sticky top-2 w-full max-w-xl z-50 bg-slate-950/90 backdrop-blur pb-2">
     <div class="relative">
       <input 
@@ -55,9 +55,9 @@
   const statusEl = document.getElementById('status');
   const bmInput = document.getElementById('bmCode');
 
-  // 1. TỰ ĐỘNG SINH MÃ BOOKMARKLET (Dùng class chính xác từ ảnh F12 để tránh treo máy)
+  // 1. TỰ ĐỘNG SINH MÃ BOOKMARKLET (Thuật toán quét toàn bộ chữ trên màn hình, không quan tâm HTML/Class)
   const currentOrigin = window.location.origin;
-  bmInput.value = `javascript:(function(){var qs=document.querySelectorAll('div[class="text-[15px] font-semibold text-foreground-900 leading-relaxed mb-4"]');if(qs.length===0){alert('Không thấy câu hỏi! Cấu trúc trang web đã thay đổi.');return;}var arr=[];qs.forEach(function(q){var txt=q.innerText.trim();if(txt.length>10){arr.push(txt);}});var url='${currentOrigin}/#auto='+encodeURIComponent(JSON.stringify(arr));var newTab=window.open(url,'_blank');if(!newTab){alert('❌ LỖI: Trình duyệt đã chặn mở tab mới!\\n\\nVui lòng vào Cài đặt -> Safari -> Tắt "Chặn Cửa sổ bật lên" (Block Pop-ups).');}})();`;
+  bmInput.value = `javascript:(function(){var txt=document.body.innerText;if(!txt||txt.length<50){alert('Không đọc được chữ trên màn hình!');return;}var url='${currentOrigin}/#auto='+encodeURIComponent(txt);var newTab=window.open(url,'_blank');if(!newTab){alert('❌ LỖI: Trình duyệt chặn mở tab mới!\\n\\nVào Cài đặt -> Safari -> Tắt "Chặn Cửa sổ bật lên".');}})();`;
 
   function copyBookmarklet() {
     navigator.clipboard.writeText(bmInput.value);
@@ -74,44 +74,42 @@
     .then(data => {
       database = data;
       
-      // 3. XỬ LÝ TỰ ĐỘNG KHI NHẬN DANH SÁCH CÂU HỎI
+      // 3. XỬ LÝ TỰ ĐỘNG BẰNG THUẬT TOÁN NGƯỢC
       if (window.location.hash.startsWith('#auto=')) {
         try {
           const payload = window.location.hash.replace('#auto=', '');
-          const questions = JSON.parse(decodeURIComponent(payload));
+          const rawScreenText = decodeURIComponent(payload); 
+          const cleanScreenText = clean(rawScreenText); // Cục chữ khổng lồ trên màn hình thi
           
           document.getElementById('searchBox').parentElement.style.display = 'none'; // Ẩn thanh tìm kiếm
-          statusEl.textContent = `Đã tự động giải ${questions.length} câu hỏi từ bài thi!`;
           
           let htmlOut = '';
-          questions.forEach((qText, index) => {
-            const qClean = clean(qText);
-            const match = database.find(item => clean(item.q).includes(qClean) || qClean.includes(clean(item.q)));
-            
-            // CẮT NGẮN CÂU HỎI ĐỂ HIỂN THỊ ĐẸP HƠN
-            const shortTitle = qText.length > 100 ? qText.substring(0, 100) + '...' : qText;
+          let count = 0;
 
-            if (match) {
+          // Duyệt qua từng câu hỏi trong ngân hàng data.json
+          database.forEach((item) => {
+            const qClean = clean(item.q);
+            
+            // Nếu câu hỏi có mặt trong cục chữ trên màn hình -> In ra luôn!
+            if (cleanScreenText.includes(qClean)) {
+              count++;
               htmlOut += `
                 <div class="p-4 bg-slate-900 border border-slate-800 rounded-xl shadow mb-3">
-                  <div class="text-xs text-slate-500 mb-1">Câu ${index + 1}:</div>
-                  <p class="text-sm font-medium text-slate-200">${shortTitle}</p>
+                  <div class="text-xs text-sky-400 mb-1 font-bold">✓ CÂU HỎI TRÊN MÀN HÌNH</div>
+                  <p class="text-sm font-medium text-slate-200">${item.q}</p>
                   <div class="mt-2 pt-2 border-t border-slate-800">
                     <span class="text-xs font-semibold px-2 py-0.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-700">ĐÁP ÁN ĐÚNG</span>
-                    <p class="text-base font-bold text-emerald-400 mt-1.5">${match.a}</p>
-                  </div>
-                </div>`;
-            } else {
-              htmlOut += `
-                <div class="p-4 bg-slate-900 border border-slate-800 rounded-xl shadow mb-3 opacity-50">
-                  <div class="text-xs text-slate-500 mb-1">Câu ${index + 1}:</div>
-                  <p class="text-sm font-medium text-slate-200">${shortTitle}</p>
-                  <div class="mt-2 pt-2 border-t border-slate-800">
-                    <p class="text-sm font-bold text-red-400 mt-1.5">❌ Không có trong ngân hàng</p>
+                    <p class="text-base font-bold text-emerald-400 mt-1.5">${item.a}</p>
                   </div>
                 </div>`;
             }
           });
+
+          if(count === 0) {
+            htmlOut = `<div class="p-4 bg-slate-900 border border-red-800 rounded-xl text-center text-red-400 text-sm">Không tìm thấy câu hỏi nào trên màn hình trùng khớp với ngân hàng.</div>`;
+          }
+
+          statusEl.textContent = `Tuyệt vời! Đã tìm và giải được ${count} câu hỏi!`;
           resultList.innerHTML = htmlOut;
           return;
         } catch(e) {
@@ -119,7 +117,7 @@
         }
       }
 
-      // 4. CHẾ ĐỘ TÌM KIẾM THỦ CÔNG
+      // 4. CHẾ ĐỘ TÌM KIẾM THỦ CÔNG (Dự phòng)
       statusEl.textContent = `Sẵn sàng: ${database.length} câu hỏi`;
       
       searchBox.addEventListener('input', (e) => {
