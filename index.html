@@ -55,9 +55,9 @@
   const statusEl = document.getElementById('status');
   const bmInput = document.getElementById('bmCode');
 
-  // 1. TỰ ĐỘNG SINH MÃ BOOKMARKLET MỚI (Lệnh tìm kiếm linh hoạt cho cả PC & Điện thoại)
+  // 1. TỰ ĐỘNG SINH MÃ BOOKMARKLET (Nhắm chuẩn xác 100% class chứa ký tự đặc biệt)
   const currentOrigin = window.location.origin;
-  bmInput.value = `javascript:(function(){var qs=document.querySelectorAll('div[class*="font-semibold"][class*="leading-relaxed"]');if(qs.length===0){alert('Không thấy câu hỏi! Cấu trúc trang web đã thay đổi.');return;}var arr=[];qs.forEach(function(q){if(q.innerText.trim().length>10){arr.push(q.innerText.trim());}});var url='${currentOrigin}/#auto='+encodeURIComponent(JSON.stringify(arr));var newTab=window.open(url,'_blank');if(!newTab){alert('❌ LỖI: Safari đã chặn mở tab mới!\\n\\nVui lòng vào Cài đặt iPhone -> Safari -> Tắt "Chặn Cửa sổ bật lên" (Block Pop-ups) rồi chạy lại nhé.');}})();`;
+  bmInput.value = `javascript:(function(){var qs=document.querySelectorAll('div[class="text-[15px] font-semibold text-foreground-900 leading-relaxed mb-4"]');if(qs.length===0){alert('Không thấy câu hỏi!');return;}var arr=[];qs.forEach(function(q){arr.push(q.innerText.trim());});var url='${currentOrigin}/#auto='+encodeURIComponent(JSON.stringify(arr));var newTab=window.open(url,'_blank');if(!newTab){alert('❌ LỖI: Trình duyệt đã chặn mở tab mới!\\n\\nVui lòng vào Cài đặt -> Safari -> Tắt "Chặn Cửa sổ bật lên" (Block Pop-ups).');}})();`;
 
   function copyBookmarklet() {
     navigator.clipboard.writeText(bmInput.value);
@@ -74,7 +74,7 @@
     .then(data => {
       database = data;
       
-      // 3. XỬ LÝ TỰ ĐỘNG: NẾU VERCEL NHẬN ĐƯỢC DANH SÁCH CÂU HỎI TỪ TRANG THI
+      // 3. XỬ LÝ TỰ ĐỘNG KHI NHẬN DANH SÁCH CÂU HỎI TỪ TRANG THI
       if (window.location.hash.startsWith('#auto=')) {
         try {
           const payload = window.location.hash.replace('#auto=', '');
@@ -84,7 +84,6 @@
           statusEl.textContent = `Đã tự động giải ${questions.length} câu hỏi từ bài thi!`;
           
           let htmlOut = '';
-          // Lần lượt đọc từng câu hỏi và in ra kết quả
           questions.forEach((qText, index) => {
             const qClean = clean(qText);
             const match = database.find(item => clean(item.q).includes(qClean) || qClean.includes(clean(item.q)));
@@ -111,13 +110,13 @@
             }
           });
           resultList.innerHTML = htmlOut;
-          return; // Kết thúc tự động, không chạy phần tìm kiếm thủ công bên dưới nữa
+          return; // Dừng, không chạy code tìm kiếm thủ công
         } catch(e) {
           alert("Lỗi đọc dữ liệu tự động!");
         }
       }
 
-      // 4. NẾU KHÔNG CÓ TỰ ĐỘNG THÌ TRỞ VỀ CHẾ ĐỘ GÕ TÌM KIẾM THỦ CÔNG
+      // 4. CHẾ ĐỘ GÕ TÌM KIẾM THỦ CÔNG NẾU KHÔNG CÓ DATA TỰ ĐỘNG
       statusEl.textContent = `Sẵn sàng: ${database.length} câu hỏi`;
       
       searchBox.addEventListener('input', (e) => {
