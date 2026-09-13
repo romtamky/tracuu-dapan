@@ -16,7 +16,7 @@
   <!-- Mục 1: Bộ công cụ dành cho điện thoại thi trực tiếp -->
   <div class="w-full max-w-xl bg-slate-900 border border-slate-800 rounded-xl p-3.5 mb-4 text-sm">
     <div class="font-semibold text-emerald-400 mb-1 flex items-center gap-1.5">
-      <span>📱 Thi trên điện thoại (Bắt chữ tự động):</span>
+      <span>📱 Thi trên điện thoại (Bảng Nổi Tự Động):</span>
     </div>
     <p class="text-xs text-slate-300 leading-relaxed">
       Tạo một dấu trang mới trên Safari/Chrome của điện thoại với đường dẫn sau:
@@ -27,20 +27,27 @@
     </div>
   </div>
 
-  <!-- Mục 2: Tra chữ nhanh -->
+  <!-- Mục 2: Tra chữ nhanh có nút X xóa tất cả -->
   <div class="sticky top-2 w-full max-w-xl z-50 bg-slate-950/90 backdrop-blur pb-2">
     <div class="relative">
       <input 
         id="searchBox" 
         type="text" 
-        placeholder="Gõ vài từ khóa trong câu hỏi..." 
-        class="w-full bg-slate-900 border border-sky-500 rounded-xl px-4 py-3 pl-11 text-base text-white focus:outline-none focus:ring-2 focus:ring-sky-400 shadow-xl"
+        placeholder="Gõ hoặc dán từ khóa..." 
+        class="w-full bg-slate-900 border border-sky-500 rounded-xl px-4 py-3 pl-11 pr-12 text-base text-white focus:outline-none focus:ring-2 focus:ring-sky-400 shadow-xl"
         autocomplete="off"
         autofocus
       />
+      <!-- Icon kính lúp -->
       <svg class="absolute left-3.5 top-3.5 w-5 h-5 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
       </svg>
+      <!-- Nút X xóa nhanh (mặc định ẩn) -->
+      <button id="clearBtn" class="absolute right-3 top-3 text-slate-400 hover:text-red-400 hidden" title="Xóa nội dung">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+      </button>
     </div>
     <div id="status" class="text-xs text-slate-400 mt-1.5 text-right">Đang tải ngân hàng đề...</div>
   </div>
@@ -51,76 +58,49 @@
 <script>
   let database = [];
   const searchBox = document.getElementById('searchBox');
+  const clearBtn = document.getElementById('clearBtn');
   const resultList = document.getElementById('resultList');
   const statusEl = document.getElementById('status');
   const bmInput = document.getElementById('bmCode');
 
-  // 1. TỰ ĐỘNG SINH MÃ BOOKMARKLET (Thuật toán quét toàn bộ chữ trên màn hình, không quan tâm HTML/Class)
+  // 1. TỰ ĐỘNG SINH MÃ BOOKMARKLET TẠO BẢNG NỔI TRÊN TRANG THI
   const currentOrigin = window.location.origin;
-  bmInput.value = `javascript:(function(){var txt=document.body.innerText;if(!txt||txt.length<50){alert('Không đọc được chữ trên màn hình!');return;}var url='${currentOrigin}/#auto='+encodeURIComponent(txt);var newTab=window.open(url,'_blank');if(!newTab){alert('❌ LỖI: Trình duyệt chặn mở tab mới!\\n\\nVào Cài đặt -> Safari -> Tắt "Chặn Cửa sổ bật lên".');}})();`;
+  
+  bmInput.value = `javascript:(function(){const DATA_URL='${currentOrigin}/data.json';function clean(s){return s.toLowerCase().normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').replace(/[đĐ]/g,'d').replace(/\\s+/g,' ').trim();}fetch(DATA_URL).then(r=>r.json()).then(db=>{const screenText=document.body.innerText;const cleanScreenText=clean(screenText);const panel=document.createElement('div');panel.style.cssText='position:fixed;top:10px;right:10px;width:300px;max-height:80vh;overflow-y:auto;background:rgba(15,23,42,0.95);color:#fff;border:2px solid #38bdf8;border-radius:10px;padding:15px;z-index:999999;font-family:sans-serif;box-shadow:0 10px 25px rgba(0,0,0,0.5);backdrop-filter:blur(5px);';let html='<div style="font-weight:bold;color:#38bdf8;margin-bottom:10px;text-align:center;border-bottom:1px solid #334155;padding-bottom:5px;">KẾT QUẢ TỰ ĐỘNG</div>';let matchedItems=[];db.forEach(item=>{const qClean=clean(item.q);const pos=cleanScreenText.indexOf(qClean);if(pos!==-1){const textBefore=cleanScreenText.substring(0,pos);const matches=[...textBefore.matchAll(/cau\\s*(\\d+)/g)];let qNum="?";if(matches.length>0){qNum=matches[matches.length-1][1];}matchedItems.push({item:item,pos:pos,qNum:qNum});}});matchedItems.sort((a,b)=>a.pos-b.pos);if(matchedItems.length===0){html+='<div style="color:#f87171;text-align:center;">Không tìm thấy câu hỏi nào!</div>';}else{html+='<div style="color:#4ade80;text-align:center;font-size:12px;margin-bottom:10px;">Đã tìm thấy '+matchedItems.length+' đáp án!</div>';matchedItems.forEach(matchObj=>{html+='<div style="background:#1e293b;padding:8px;border-radius:6px;margin-bottom:8px;border-left:4px solid #10b981;"><div style="font-size:11px;color:#94a3b8;margin-bottom:4px;">CÂU '+matchObj.qNum+'</div><div style="color:#10b981;font-weight:bold;font-size:14px;line-height:1.4;">'+matchObj.item.a+'</div></div>';});}html+='<button id="closeBtn" style="width:100%;margin-top:10px;padding:8px;background:#ef4444;color:white;border:none;border-radius:6px;font-weight:bold;cursor:pointer;">ĐÓNG</button>';panel.innerHTML=html;document.body.appendChild(panel);document.getElementById('closeBtn').onclick=function(){document.body.removeChild(panel);};}).catch(()=>alert('Lỗi tải dữ liệu ngân hàng!'));})();`;
 
   function copyBookmarklet() {
     navigator.clipboard.writeText(bmInput.value);
-    alert("Đã sao chép mã Tự Động! Hãy lưu vào dấu trang trên điện thoại.");
+    alert("Đã sao chép mã Bảng Nổi! Hãy lưu vào dấu trang trên điện thoại.");
   }
 
   function clean(str) {
     return str.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[đĐ]/g, 'd').replace(/\s+/g, ' ').trim();
   }
 
-  // 2. TẢI DỮ LIỆU TỪ DATA.JSON
+  // Xử lý sự kiện nút Xóa nhanh
+  clearBtn.addEventListener('click', () => {
+    searchBox.value = '';
+    clearBtn.classList.add('hidden');
+    searchBox.focus(); // Đưa con trỏ chuột quay lại ô tìm kiếm
+    searchBox.dispatchEvent(new Event('input')); // Kích hoạt sự kiện input để xóa kết quả hiển thị bên dưới
+  });
+
+  // 2. TẢI DỮ LIỆU TỪ DATA.JSON ĐỂ DÙNG CHO PHẦN TÌM KIẾM THỦ CÔNG
   fetch('data.json')
     .then(r => r.json())
     .then(data => {
       database = data;
-      
-      // 3. XỬ LÝ TỰ ĐỘNG BẰNG THUẬT TOÁN NGƯỢC
-      if (window.location.hash.startsWith('#auto=')) {
-        try {
-          const payload = window.location.hash.replace('#auto=', '');
-          const rawScreenText = decodeURIComponent(payload); 
-          const cleanScreenText = clean(rawScreenText); // Cục chữ khổng lồ trên màn hình thi
-          
-          document.getElementById('searchBox').parentElement.style.display = 'none'; // Ẩn thanh tìm kiếm
-          
-          let htmlOut = '';
-          let count = 0;
-
-          // Duyệt qua từng câu hỏi trong ngân hàng data.json
-          database.forEach((item) => {
-            const qClean = clean(item.q);
-            
-            // Nếu câu hỏi có mặt trong cục chữ trên màn hình -> In ra luôn!
-            if (cleanScreenText.includes(qClean)) {
-              count++;
-              htmlOut += `
-                <div class="p-4 bg-slate-900 border border-slate-800 rounded-xl shadow mb-3">
-                  <div class="text-xs text-sky-400 mb-1 font-bold">✓ CÂU HỎI TRÊN MÀN HÌNH</div>
-                  <p class="text-sm font-medium text-slate-200">${item.q}</p>
-                  <div class="mt-2 pt-2 border-t border-slate-800">
-                    <span class="text-xs font-semibold px-2 py-0.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-700">ĐÁP ÁN ĐÚNG</span>
-                    <p class="text-base font-bold text-emerald-400 mt-1.5">${item.a}</p>
-                  </div>
-                </div>`;
-            }
-          });
-
-          if(count === 0) {
-            htmlOut = `<div class="p-4 bg-slate-900 border border-red-800 rounded-xl text-center text-red-400 text-sm">Không tìm thấy câu hỏi nào trên màn hình trùng khớp với ngân hàng.</div>`;
-          }
-
-          statusEl.textContent = `Tuyệt vời! Đã tìm và giải được ${count} câu hỏi!`;
-          resultList.innerHTML = htmlOut;
-          return;
-        } catch(e) {
-          alert("Lỗi đọc dữ liệu tự động!");
-        }
-      }
-
-      // 4. CHẾ ĐỘ TÌM KIẾM THỦ CÔNG (Dự phòng)
       statusEl.textContent = `Sẵn sàng: ${database.length} câu hỏi`;
       
+      // 3. XỬ LÝ CHẾ ĐỘ GÕ TÌM KIẾM THỦ CÔNG
       searchBox.addEventListener('input', (e) => {
+        // Hiện/ẩn nút X
+        if(e.target.value.length > 0) {
+          clearBtn.classList.remove('hidden');
+        } else {
+          clearBtn.classList.add('hidden');
+        }
+
         const q = clean(e.target.value);
         if (q.length < 2) {
           resultList.innerHTML = '';
