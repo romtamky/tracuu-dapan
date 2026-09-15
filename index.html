@@ -15,7 +15,7 @@
     <p class="text-xs text-slate-400 mt-1">Hệ thống 3-trong-1: Tự động, Đọc ảnh AI và Tra thủ công</p>
   </header>
 
-  <!-- TÍNH NĂNG 1: Dấu trang tự động (NÚT TÀNG HÌNH) -->
+  <!-- TÍNH NĂNG 1: Dấu trang tự động (NÚT TÀNG HÌNH ĐÃ CHUẨN VỊ TRÍ) -->
   <div class="w-full max-w-xl bg-slate-900 border border-slate-800 rounded-xl p-3.5 mb-4 text-sm shadow-lg">
     <div class="font-semibold text-emerald-400 mb-1 flex items-center gap-1.5">
       <span>1️⃣ Bảng Nổi Tàng Hình (Nút ảo iOS):</span>
@@ -29,7 +29,7 @@
   <!-- TÍNH NĂNG 2: Tải ảnh chụp màn hình lên để AI đọc -->
   <div class="w-full max-w-xl bg-slate-900 border border-slate-800 rounded-xl p-3.5 mb-4 shadow-lg">
     <div class="font-semibold text-amber-400 mb-2 flex items-center gap-1.5 text-sm">
-      <span>2️⃣ Quét Ảnh Bằng AI (Đã tối ưu khử sọc/nhiễu):</span>
+      <span>2️⃣ Quét Ảnh Bằng AI (Đã tối ưu bộ lọc từ khóa cốt lõi):</span>
     </div>
     <p class="text-xs text-slate-400 leading-relaxed mb-3">
       Chụp màn hình máy tính lưu vào điện thoại, tải ảnh lên để AI phân tích và đối chiếu đáp án.
@@ -78,7 +78,7 @@
   const bmInput = document.getElementById('bmCode');
   const imageUpload = document.getElementById('imageUpload');
 
-  // MÃ BOOKMARKLET "NÚT ẢO TÀNG HÌNH" ĐƯỢC ĐẨY LÊN CAO HƠN (~1cm - bottom:80px)
+  // MÃ BOOKMARKLET "NÚT ẢO TÀNG HÌNH" (Không thay đổi)
   const currentOrigin = window.location.origin;
   bmInput.value = `javascript:(function(){const DATA_URL='${currentOrigin}/data.json';function clean(s){return s.toLowerCase().normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').replace(/[đĐ]/g,'d').replace(/\\s+/g,' ').trim();}fetch(DATA_URL).then(r=>r.json()).then(db=>{const screenText=document.body.innerText;const cleanScreenText=clean(screenText);const exBtn=document.getElementById('stealth-btn');if(exBtn)exBtn.remove();const exPanel=document.getElementById('auto-ans-panel');if(exPanel)exPanel.remove();let matchedItems=[];db.forEach(item=>{const qClean=clean(item.q);const pos=cleanScreenText.indexOf(qClean);if(pos!==-1){const textBefore=cleanScreenText.substring(0,pos);const matches=[...textBefore.matchAll(/cau\\s*(\\d+)/g)];let qNum="?";if(matches.length>0)qNum=matches[matches.length-1][1];matchedItems.push({item:item,pos:pos,qNum:qNum});}});matchedItems.sort((a,b)=>a.pos-b.pos);const btn=document.createElement('div');btn.id='stealth-btn';btn.style.cssText='position:fixed;bottom:80px;right:15px;width:40px;height:40px;border-radius:50%;background:rgba(0,0,0,0.2);border:1px solid rgba(255,255,255,0.1);z-index:999999;backdrop-filter:blur(2px);cursor:pointer;display:flex;align-items:center;justify-content:center;';btn.innerHTML='<div style="width:16px;height:16px;border-radius:50%;background:rgba(255,255,255,0.3);"></div>';document.body.appendChild(btn);const panel=document.createElement('div');panel.id='auto-ans-panel';panel.style.cssText='position:fixed;bottom:15px;left:15px;right:15px;max-height:45vh;background:rgba(15,23,42,0.95);color:#fff;border:2px solid #38bdf8;border-radius:10px;z-index:999999;font-family:sans-serif;box-shadow:0 10px 25px rgba(0,0,0,0.5);backdrop-filter:blur(5px);display:none;flex-direction:column;';let headerHtml='<div style="padding:10px 15px;font-weight:bold;color:#38bdf8;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #334155;"><span>KẾT QUẢ ('+matchedItems.length+')</span><button id="minBtn" style="background:none;border:none;color:#94a3b8;font-size:14px;cursor:pointer;font-weight:bold;">▼ Thu nhỏ</button></div>';let contentHtml='<div style="padding:10px 15px;overflow-y:auto;flex:1;">';if(matchedItems.length===0){contentHtml+='<div style="color:#f87171;text-align:center;">Không tìm thấy câu hỏi!</div>';}else{matchedItems.forEach(matchObj=>{contentHtml+='<div style="background:#1e293b;padding:8px;border-radius:6px;margin-bottom:8px;border-left:4px solid #10b981;"><div style="font-size:11px;color:#94a3b8;margin-bottom:4px;">CÂU '+matchObj.qNum+'</div><div style="color:#10b981;font-weight:bold;font-size:13px;line-height:1.4;">'+matchObj.item.a+'</div></div>';});}contentHtml+='<button id="closeBtn" style="width:100%;margin-top:5px;padding:8px;background:#ef4444;color:white;border:none;border-radius:6px;font-weight:bold;cursor:pointer;">ĐÓNG HOÀN TOÀN</button></div>';panel.innerHTML=headerHtml+contentHtml;document.body.appendChild(panel);btn.onclick=function(){btn.style.display='none';panel.style.display='flex';};document.getElementById('minBtn').onclick=function(){panel.style.display='none';btn.style.display='flex';};document.getElementById('closeBtn').onclick=function(){btn.remove();panel.remove();};}).catch(()=>alert('Lỗi tải dữ liệu!'));})();`;
 
@@ -91,18 +91,36 @@
     return str.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[đĐ]/g, 'd').replace(/\s+/g, ' ').trim();
   }
 
-  // THUẬT TOÁN DUNG SAI (FUZZY MATCH) CHO ẢNH
-  function fuzzyMatch(ocrText, qText) {
-    const qWords = qText.split(/\s+/).filter(w => w.length >= 3);
-    if (qWords.length === 0) return ocrText.includes(qText);
+  // THUẬT TOÁN ĐỌC ẢNH MỚI: LỌC TỪ KHÓA CỐT LÕI (Không bị ảo chữ Nghị quyết)
+  function robustMatch(ocrText, qText) {
+    // 1. Loại bỏ các từ quá phổ biến dễ gây nhiễu
+    const stopWords = ['cua', 'va', 'cac', 'co', 'la', 'de', 'trong', 'voi', 'cho', 'nhung', 'duoc', 'thi', 'khong', 'nhu', 'mot', 'khi', 'nao', 've', 'tu', 'cau', 'hoi', 'dap', 'an', 'nghi', 'quyet', 'dang', 'nam', 'thang', 'ngay', 'do', 'su', 'viec', 'theo', 'quy', 'dinh', 'tai', 'khoan', 'dieu', 'luat', 'ban', 'hanh', 'so', 'cac', 'nha', 'nuoc'];
     
+    // 2. Chỉ giữ lại những từ đặc trưng (độ dài > 2)
+    let qWords = qText.split(/\s+/).filter(w => w.length > 2 && !stopWords.includes(w));
+    
+    // Nếu câu hỏi quá ngắn sau khi lọc, lấy lại các từ dài
+    if (qWords.length < 3) {
+      qWords = qText.split(/\s+/).filter(w => w.length > 2);
+    }
+    
+    // Đề phòng ngoại lệ
+    if (qWords.length === 0) {
+      const solidOCR = ocrText.replace(/[^a-z0-9]/g, '');
+      const solidQ = qText.replace(/[^a-z0-9]/g, '');
+      return solidOCR.includes(solidQ);
+    }
+
+    // 3. Đếm số lượng từ khóa đặc trưng xuất hiện trong ảnh
     let matchCount = 0;
     qWords.forEach(word => {
-      if (ocrText.includes(word)) matchCount++;
+      if (ocrText.includes(word)) {
+        matchCount++;
+      }
     });
     
-    const matchRatio = matchCount / qWords.length;
-    return matchRatio > 0.65; 
+    // 4. Nếu AI đọc trúng >= 65% số từ khóa đặc trưng này -> Xác nhận trúng đáp án!
+    return (matchCount / qWords.length) >= 0.65;
   }
 
   // TẢI DỮ LIỆU
@@ -155,6 +173,7 @@
       canvas.width = img.width;
       canvas.height = img.height;
 
+      // Bộ lọc khử sọc
       ctx.filter = 'grayscale(100%) contrast(300%) blur(0.5px)';
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
       
@@ -167,12 +186,13 @@
         
         let matchedItems = [];
         database.forEach(item => {
-          if (fuzzyMatch(cleanImgText, clean(item.q))) {
+          // Gọi thuật toán nhận diện ảnh chuyên sâu
+          if (robustMatch(cleanImgText, clean(item.q))) {
             matchedItems.push(item);
           }
         });
 
-        statusEl.textContent = `📸 Xử lý xong! Tìm thấy ${matchedItems.length} đáp án.`;
+        statusEl.textContent = `📸 Xử lý xong! Tìm thấy ${matchedItems.length} đáp án chuẩn.`;
         renderResults(matchedItems);
         imageUpload.value = ""; 
 
