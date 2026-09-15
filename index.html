@@ -5,55 +5,69 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Cổng Tra Cứu Đề Thi</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Nhúng thư viện AI đọc chữ từ ảnh (Tesseract.js) -->
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 </head>
 <body class="bg-slate-950 text-slate-100 min-h-screen p-4 flex flex-col items-center">
 
   <header class="w-full max-w-xl mb-4 text-center">
     <h1 class="text-xl font-bold text-sky-400">Tra Cứu Đáp Án Đề Thi</h1>
-    <p class="text-xs text-slate-400 mt-1">Dành cho cả máy tính thi phòng máy và điện thoại cá nhân</p>
+    <p class="text-xs text-slate-400 mt-1">Hệ thống 3-trong-1: Tự động, Đọc ảnh AI và Tra thủ công</p>
   </header>
 
-  <!-- Mục 1: Bộ công cụ dành cho điện thoại thi trực tiếp -->
-  <div class="w-full max-w-xl bg-slate-900 border border-slate-800 rounded-xl p-3.5 mb-4 text-sm">
+  <!-- TÍNH NĂNG 1: Dấu trang tự động (NÚT TÀNG HÌNH) -->
+  <div class="w-full max-w-xl bg-slate-900 border border-slate-800 rounded-xl p-3.5 mb-4 text-sm shadow-lg">
     <div class="font-semibold text-emerald-400 mb-1 flex items-center gap-1.5">
-      <span>📱 Thi trên điện thoại (Bảng Nổi Thông Minh):</span>
+      <span>1️⃣ Bảng Nổi Tàng Hình (Nút ảo iOS):</span>
     </div>
-    <p class="text-xs text-slate-300 leading-relaxed">
-      Tạo một dấu trang mới trên Safari/Chrome của điện thoại với đường dẫn sau:
-    </p>
-    <div class="mt-2 flex gap-2">
+    <div class="flex gap-2 mt-2">
       <input id="bmCode" readonly class="w-full bg-slate-950 border border-slate-700 rounded px-2.5 py-1 text-xs text-slate-400 font-mono select-all">
       <button onclick="copyBookmarklet()" class="bg-sky-600 hover:bg-sky-500 text-white text-xs px-3 py-1 rounded font-medium shrink-0">Sao chép</button>
     </div>
   </div>
 
-  <!-- Mục 2: Tra chữ nhanh có nút X xóa tất cả -->
+  <!-- TÍNH NĂNG 2: Tải ảnh chụp màn hình lên để AI đọc -->
+  <div class="w-full max-w-xl bg-slate-900 border border-slate-800 rounded-xl p-3.5 mb-4 shadow-lg">
+    <div class="font-semibold text-amber-400 mb-2 flex items-center gap-1.5 text-sm">
+      <span>2️⃣ Quét Ảnh Bằng AI (Đã tối ưu khử sọc/nhiễu):</span>
+    </div>
+    <p class="text-xs text-slate-400 leading-relaxed mb-3">
+      Chụp màn hình máy tính lưu vào điện thoại, tải ảnh lên để AI phân tích và đối chiếu đáp án.
+    </p>
+    <input type="file" id="imageUpload" accept="image/*" class="hidden">
+    <button onclick="document.getElementById('imageUpload').click()" class="w-full bg-amber-600 hover:bg-amber-500 text-white font-bold py-2.5 px-4 rounded-lg shadow flex justify-center items-center gap-2 transition-colors">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+      Chọn Ảnh Từ Thư Viện
+    </button>
+  </div>
+
+  <!-- TÍNH NĂNG 3: Tra chữ nhanh (Thủ công) -->
   <div class="sticky top-2 w-full max-w-xl z-50 bg-slate-950/90 backdrop-blur pb-2">
+    <div class="font-semibold text-sky-400 mb-2 flex items-center gap-1.5 text-sm px-1">
+      <span>3️⃣ Tìm Kiếm Thủ Công:</span>
+    </div>
     <div class="relative">
       <input 
         id="searchBox" 
         type="text" 
-        placeholder="Gõ hoặc dán từ khóa..." 
+        placeholder="Gõ hoặc dán vài từ khóa..." 
         class="w-full bg-slate-900 border border-sky-500 rounded-xl px-4 py-3 pl-11 pr-12 text-base text-white focus:outline-none focus:ring-2 focus:ring-sky-400 shadow-xl"
         autocomplete="off"
-        autofocus
       />
-      <!-- Icon kính lúp -->
       <svg class="absolute left-3.5 top-3.5 w-5 h-5 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
       </svg>
-      <!-- Nút X xóa nhanh (mặc định ẩn) -->
       <button id="clearBtn" class="absolute right-3 top-3 text-slate-400 hover:text-red-400 hidden" title="Xóa nội dung">
         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
         </svg>
       </button>
     </div>
-    <div id="status" class="text-xs text-slate-400 mt-1.5 text-right">Đang tải ngân hàng đề...</div>
+    <div id="status" class="text-xs text-sky-400 font-semibold mt-1.5 text-right">Đang tải ngân hàng đề...</div>
   </div>
 
   <!-- Danh sách hiển thị đáp án -->
-  <main id="resultList" class="w-full max-w-xl space-y-3 pb-12"></main>
+  <main id="resultList" class="w-full max-w-xl space-y-3 pb-12 mt-2"></main>
 
 <script>
   let database = [];
@@ -62,75 +76,140 @@
   const resultList = document.getElementById('resultList');
   const statusEl = document.getElementById('status');
   const bmInput = document.getElementById('bmCode');
+  const imageUpload = document.getElementById('imageUpload');
 
-  // 1. MÃ BOOKMARKLET ĐƯỢC NÂNG CẤP (Bảng dưới cùng, có thể thu gọn, không choáng chỗ)
+  // MÃ BOOKMARKLET "NÚT ẢO TÀNG HÌNH"
   const currentOrigin = window.location.origin;
-  
-  bmInput.value = `javascript:(function(){const DATA_URL='${currentOrigin}/data.json';function clean(s){return s.toLowerCase().normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').replace(/[đĐ]/g,'d').replace(/\\s+/g,' ').trim();}fetch(DATA_URL).then(r=>r.json()).then(db=>{const screenText=document.body.innerText;const cleanScreenText=clean(screenText);const existing=document.getElementById('auto-ans-panel');if(existing)existing.remove();const panel=document.createElement('div');panel.id='auto-ans-panel';panel.style.cssText='position:fixed;bottom:15px;left:15px;right:15px;max-height:45vh;background:rgba(15,23,42,0.95);color:#fff;border:2px solid #38bdf8;border-radius:10px;z-index:999999;font-family:sans-serif;box-shadow:0 10px 25px rgba(0,0,0,0.5);backdrop-filter:blur(5px);display:flex;flex-direction:column;';let matchedItems=[];db.forEach(item=>{const qClean=clean(item.q);const pos=cleanScreenText.indexOf(qClean);if(pos!==-1){const textBefore=cleanScreenText.substring(0,pos);const matches=[...textBefore.matchAll(/cau\\s*(\\d+)/g)];let qNum="?";if(matches.length>0){qNum=matches[matches.length-1][1];}matchedItems.push({item:item,pos:pos,qNum:qNum});}});matchedItems.sort((a,b)=>a.pos-b.pos);let headerHtml='<div id="panelHeader" style="padding:10px 15px;font-weight:bold;color:#38bdf8;cursor:pointer;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #334155;"><span>KẾT QUẢ ('+matchedItems.length+')</span><span id="toggleIcon">▼</span></div>';let contentHtml='<div id="panelContent" style="padding:10px 15px;overflow-y:auto;flex:1;">';if(matchedItems.length===0){contentHtml+='<div style="color:#f87171;text-align:center;">Không tìm thấy câu hỏi!</div>';}else{matchedItems.forEach(matchObj=>{contentHtml+='<div style="background:#1e293b;padding:8px;border-radius:6px;margin-bottom:8px;border-left:4px solid #10b981;"><div style="font-size:11px;color:#94a3b8;margin-bottom:4px;">CÂU '+matchObj.qNum+'</div><div style="color:#10b981;font-weight:bold;font-size:13px;line-height:1.4;">'+matchObj.item.a+'</div></div>';});}contentHtml+='<button id="closeBtn" style="width:100%;margin-top:5px;padding:8px;background:#ef4444;color:white;border:none;border-radius:6px;font-weight:bold;cursor:pointer;">ĐÓNG HOÀN TOÀN</button></div>';panel.innerHTML=headerHtml+contentHtml;document.body.appendChild(panel);document.getElementById('panelHeader').onclick=function(){const content=document.getElementById('panelContent');const icon=document.getElementById('toggleIcon');if(content.style.display==='none'){content.style.display='block';icon.innerText='▼';}else{content.style.display='none';icon.innerText='▲';}};document.getElementById('closeBtn').onclick=function(){document.body.removeChild(panel);};}).catch(()=>alert('Lỗi tải dữ liệu ngân hàng!'));})();`;
+  bmInput.value = `javascript:(function(){const DATA_URL='${currentOrigin}/data.json';function clean(s){return s.toLowerCase().normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').replace(/[đĐ]/g,'d').replace(/\\s+/g,' ').trim();}fetch(DATA_URL).then(r=>r.json()).then(db=>{const screenText=document.body.innerText;const cleanScreenText=clean(screenText);const exBtn=document.getElementById('stealth-btn');if(exBtn)exBtn.remove();const exPanel=document.getElementById('auto-ans-panel');if(exPanel)exPanel.remove();let matchedItems=[];db.forEach(item=>{const qClean=clean(item.q);const pos=cleanScreenText.indexOf(qClean);if(pos!==-1){const textBefore=cleanScreenText.substring(0,pos);const matches=[...textBefore.matchAll(/cau\\s*(\\d+)/g)];let qNum="?";if(matches.length>0)qNum=matches[matches.length-1][1];matchedItems.push({item:item,pos:pos,qNum:qNum});}});matchedItems.sort((a,b)=>a.pos-b.pos);const btn=document.createElement('div');btn.id='stealth-btn';btn.style.cssText='position:fixed;bottom:30px;right:15px;width:40px;height:40px;border-radius:50%;background:rgba(0,0,0,0.2);border:1px solid rgba(255,255,255,0.1);z-index:999999;backdrop-filter:blur(2px);cursor:pointer;display:flex;align-items:center;justify-content:center;';btn.innerHTML='<div style="width:16px;height:16px;border-radius:50%;background:rgba(255,255,255,0.3);"></div>';document.body.appendChild(btn);const panel=document.createElement('div');panel.id='auto-ans-panel';panel.style.cssText='position:fixed;bottom:15px;left:15px;right:15px;max-height:45vh;background:rgba(15,23,42,0.95);color:#fff;border:2px solid #38bdf8;border-radius:10px;z-index:999999;font-family:sans-serif;box-shadow:0 10px 25px rgba(0,0,0,0.5);backdrop-filter:blur(5px);display:none;flex-direction:column;';let headerHtml='<div style="padding:10px 15px;font-weight:bold;color:#38bdf8;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #334155;"><span>KẾT QUẢ ('+matchedItems.length+')</span><button id="minBtn" style="background:none;border:none;color:#94a3b8;font-size:14px;cursor:pointer;font-weight:bold;">▼ Thu nhỏ</button></div>';let contentHtml='<div style="padding:10px 15px;overflow-y:auto;flex:1;">';if(matchedItems.length===0){contentHtml+='<div style="color:#f87171;text-align:center;">Không tìm thấy câu hỏi!</div>';}else{matchedItems.forEach(matchObj=>{contentHtml+='<div style="background:#1e293b;padding:8px;border-radius:6px;margin-bottom:8px;border-left:4px solid #10b981;"><div style="font-size:11px;color:#94a3b8;margin-bottom:4px;">CÂU '+matchObj.qNum+'</div><div style="color:#10b981;font-weight:bold;font-size:13px;line-height:1.4;">'+matchObj.item.a+'</div></div>';});}contentHtml+='<button id="closeBtn" style="width:100%;margin-top:5px;padding:8px;background:#ef4444;color:white;border:none;border-radius:6px;font-weight:bold;cursor:pointer;">ĐÓNG HOÀN TOÀN</button></div>';panel.innerHTML=headerHtml+contentHtml;document.body.appendChild(panel);btn.onclick=function(){btn.style.display='none';panel.style.display='flex';};document.getElementById('minBtn').onclick=function(){panel.style.display='none';btn.style.display='flex';};document.getElementById('closeBtn').onclick=function(){btn.remove();panel.remove();};}).catch(()=>alert('Lỗi tải dữ liệu!'));})();`;
 
   function copyBookmarklet() {
     navigator.clipboard.writeText(bmInput.value);
-    alert("Đã sao chép mã Bảng Nổi! Hãy lưu vào dấu trang trên điện thoại.");
+    alert("Đã sao chép mã Bảng Nổi!");
   }
 
   function clean(str) {
     return str.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[đĐ]/g, 'd').replace(/\s+/g, ' ').trim();
   }
 
-  // Xử lý sự kiện nút Xóa nhanh
-  clearBtn.addEventListener('click', () => {
-    searchBox.value = '';
-    clearBtn.classList.add('hidden');
-    searchBox.focus(); // Đưa con trỏ chuột quay lại ô tìm kiếm
-    searchBox.dispatchEvent(new Event('input')); // Kích hoạt sự kiện input để xóa kết quả hiển thị bên dưới
-  });
+  // THUẬT TOÁN DUNG SAI (FUZZY MATCH) CHO ẢNH
+  function fuzzyMatch(ocrText, qText) {
+    const qWords = qText.split(/\s+/).filter(w => w.length >= 3);
+    if (qWords.length === 0) return ocrText.includes(qText);
+    
+    let matchCount = 0;
+    qWords.forEach(word => {
+      if (ocrText.includes(word)) matchCount++;
+    });
+    
+    const matchRatio = matchCount / qWords.length;
+    return matchRatio > 0.65; 
+  }
 
-  // 2. TẢI DỮ LIỆU TỪ DATA.JSON ĐỂ DÙNG CHO PHẦN TÌM KIẾM THỦ CÔNG
+  // TẢI DỮ LIỆU
   fetch('data.json')
     .then(r => r.json())
     .then(data => {
       database = data;
       statusEl.textContent = `Sẵn sàng: ${database.length} câu hỏi`;
-      
-      // 3. XỬ LÝ CHẾ ĐỘ GÕ TÌM KIẾM THỦ CÔNG
-      searchBox.addEventListener('input', (e) => {
-        // Hiện/ẩn nút X
-        if(e.target.value.length > 0) {
-          clearBtn.classList.remove('hidden');
-        } else {
-          clearBtn.classList.add('hidden');
-        }
-
-        const q = clean(e.target.value);
-        if (q.length < 2) {
-          resultList.innerHTML = '';
-          statusEl.textContent = `Sẵn sàng: ${database.length} câu hỏi`;
-          return;
-        }
-
-        const matched = database.filter(item => clean(item.q).includes(q));
-        statusEl.textContent = `Tìm thấy: ${matched.length} câu hỏi`;
-
-        if (matched.length === 0) {
-          resultList.innerHTML = `<div class="p-4 bg-slate-900 border border-slate-800 rounded-xl text-center text-slate-400 text-sm">Không có kết quả.</div>`;
-          return;
-        }
-
-        resultList.innerHTML = matched.map(item => `
-          <div class="p-4 bg-slate-900 border border-slate-800 rounded-xl shadow mb-3">
-            <p class="text-sm font-medium text-slate-200">${item.q}</p>
-            <div class="mt-2 pt-2 border-t border-slate-800">
-              <span class="text-xs font-semibold px-2 py-0.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-700">ĐÁP ÁN ĐÚNG</span>
-              <p class="text-base font-bold text-emerald-400 mt-1.5">${item.a}</p>
-            </div>
-          </div>
-        `).join('');
-      });
-
     })
     .catch(() => {
       statusEl.textContent = 'Lỗi nạp file dữ liệu!';
     });
+
+  // HÀM XUẤT KẾT QUẢ
+  function renderResults(matchedArray) {
+    if (matchedArray.length === 0) {
+      resultList.innerHTML = `<div class="p-4 bg-slate-900 border border-red-800 rounded-xl text-center text-red-400 text-sm font-semibold">Không tìm thấy đáp án nào khớp với dữ liệu!</div>`;
+      return;
+    }
+
+    resultList.innerHTML = matchedArray.map(item => `
+      <div class="p-4 bg-slate-900 border border-slate-800 rounded-xl shadow mb-3">
+        <p class="text-sm font-medium text-slate-200">${item.q}</p>
+        <div class="mt-2 pt-2 border-t border-slate-800">
+          <span class="text-xs font-semibold px-2 py-0.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-700">ĐÁP ÁN ĐÚNG</span>
+          <p class="text-base font-bold text-emerald-400 mt-1.5">${item.a}</p>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  // TÍNH NĂNG 2: TIỀN XỬ LÝ ẢNH & ĐỌC AI
+  imageUpload.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    searchBox.value = '';
+    clearBtn.classList.add('hidden');
+    statusEl.textContent = '⏳ Hệ thống đang khử nhiễu & phân tích... (3-5s)';
+    resultList.innerHTML = `<div class="text-center text-amber-400 animate-pulse text-sm py-4">Đang áp dụng bộ lọc khử sọc màn hình và trích xuất chữ...</div>`;
+
+    const img = new Image();
+    const reader = new FileReader();
+    
+    reader.onload = (event) => { img.src = event.target.result; };
+    
+    img.onload = async () => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      canvas.width = img.width;
+      canvas.height = img.height;
+
+      ctx.filter = 'grayscale(100%) contrast(300%) blur(0.5px)';
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      
+      const processedImageUrl = canvas.toDataURL('image/jpeg', 0.9);
+
+      try {
+        const result = await Tesseract.recognize(processedImageUrl, 'vie');
+        const textFromImage = result.data.text;
+        const cleanImgText = clean(textFromImage);
+        
+        let matchedItems = [];
+        database.forEach(item => {
+          if (fuzzyMatch(cleanImgText, clean(item.q))) {
+            matchedItems.push(item);
+          }
+        });
+
+        statusEl.textContent = `📸 Xử lý xong! Tìm thấy ${matchedItems.length} đáp án.`;
+        renderResults(matchedItems);
+        imageUpload.value = ""; 
+
+      } catch (error) {
+        statusEl.textContent = '❌ Lỗi hệ thống khi đọc ảnh!';
+        resultList.innerHTML = '';
+        imageUpload.value = "";
+      }
+    };
+    
+    reader.readAsDataURL(file);
+  });
+
+  // TÍNH NĂNG 3: GÕ TÌM KIẾM THỦ CÔNG
+  clearBtn.addEventListener('click', () => {
+    searchBox.value = '';
+    clearBtn.classList.add('hidden');
+    searchBox.focus();
+    searchBox.dispatchEvent(new Event('input'));
+  });
+
+  searchBox.addEventListener('input', (e) => {
+    if(e.target.value.length > 0) {
+      clearBtn.classList.remove('hidden');
+    } else {
+      clearBtn.classList.add('hidden');
+    }
+    const q = clean(e.target.value);
+    if (q.length < 2) {
+      resultList.innerHTML = '';
+      statusEl.textContent = `Sẵn sàng: ${database.length} câu hỏi`;
+      return;
+    }
+    const matched = database.filter(item => clean(item.q).includes(q));
+    statusEl.textContent = `🔍 Gõ tay: Tìm thấy ${matched.length} câu hỏi`;
+    renderResults(matched);
+  });
 </script>
 </body>
 </html>
